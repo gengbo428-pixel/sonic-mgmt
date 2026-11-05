@@ -25,6 +25,7 @@ from tests.transceiver.cdb_firmware_upgrade.utils.firmware_utils import (
     create_corrupted_binary,
     create_zero_filled_binary,
     resolve_binary_path,
+    select_distinct_version,
 )
 from tests.transceiver.dom import dom_helpers
 from tests.transceiver.eeprom import recovery
@@ -52,19 +53,6 @@ def select_target_version(firmware_versions, banks):
         if next_version not in (active, inactive):
             return next_version
     return firmware_versions[0]
-
-
-def select_distinct_version(firmware_versions, gold_version):
-    """Select the version differing from ``gold_version`` in minor AND point.
-
-    Returns ``None`` when no entry qualifies.
-    """
-    gold_parts = gold_version.split(".")[1:] if gold_version else []
-    for version in firmware_versions or []:
-        parts = version.split(".")[1:]
-        if parts and len(parts) == len(gold_parts) and all(p != g for p, g in zip(parts, gold_parts)):
-            return version
-    return None
 
 
 def _verify_running_committed_unchanged(after_banks, before_banks):

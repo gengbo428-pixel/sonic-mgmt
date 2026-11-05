@@ -12,6 +12,38 @@ logger = logging.getLogger(__name__)
 EXPECTED_FIRMWARE_VERSIONS_COUNT = 3
 
 
+def select_distinct_version(firmware_versions, gold_version):
+    """Return a version whose minor and point numbers both differ from gold."""
+    gold_parts = gold_version.split(".") if isinstance(gold_version, str) else []
+    if len(gold_parts) < 3 or not all(gold_parts[1:3]):
+        return None
+
+    for version in firmware_versions or []:
+        parts = version.split(".") if isinstance(version, str) else []
+        if (len(parts) >= 3 and all(parts[1:3])
+                and parts[1] != gold_parts[1] and parts[2] != gold_parts[2]):
+            return version
+    return None
+
+
+def validate_distinct_firmware_versions(port_attributes_dict, qualifying_ports):
+    """Skip the suite when a qualifying port cannot run the distinct-version test."""
+    errors = []
+    for port in qualifying_ports:
+        attrs = port_attributes_dict[port].get(CDB_FIRMWARE_UPGRADE_ATTRIBUTES_KEY, {})
+        versions = attrs.get("firmware_versions")
+        gold = attrs.get("gold_firmware_version")
+        if (not isinstance(versions, list) or not versions or not isinstance(gold, str)
+                or not all(isinstance(version, str) for version in versions)):
+            logger.warning("%s: incomplete firmware versions; deferring to metadata validation", port)
+            continue
+        if select_distinct_version(versions, gold) is None:
+            errors.append(f"{port}: no firmware version differs from gold in both minor and point numbers")
+
+    if errors:
+        pytest.skip("CDB firmware attribute invariant violation:\n" + "\n".join(errors))
+
+
 def get_required_firmware_metadata_for_all_transceivers(
     port_attributes_dict,
     transceiver_firmware_info,

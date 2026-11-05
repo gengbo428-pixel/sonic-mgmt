@@ -14,6 +14,7 @@ from tests.transceiver.cdb_firmware_upgrade.utils.firmware_utils import (
     download_and_validate_firmware_binaries,
     stage_prestaged_firmware_binaries,
     cleanup_firmware_files,
+    validate_distinct_firmware_versions,
 )
 from tests.transceiver.common.eeprom_decode import is_cmis_active_optical
 from tests.transceiver.common.port_selectors import (
@@ -56,10 +57,16 @@ def transceiver_firmware_info_parser(ansible_root):
 
 
 @pytest.fixture(scope="session")
+def cdb_firmware_distinct_version_prerequisite(port_attributes_dict, cdb_firmware_qualifying_ports):
+    validate_distinct_firmware_versions(port_attributes_dict, cdb_firmware_qualifying_ports)
+
+
+@pytest.fixture(scope="session")
 def required_firmware_metadata_for_all_transceivers(
     port_attributes_dict,
-    transceiver_firmware_info_parser,
     cdb_firmware_qualifying_ports,
+    cdb_firmware_distinct_version_prerequisite,
+    transceiver_firmware_info_parser,
 ):
     return get_required_firmware_metadata_for_all_transceivers(
         port_attributes_dict,
@@ -71,8 +78,8 @@ def required_firmware_metadata_for_all_transceivers(
 @pytest.fixture(scope="package", autouse=True)
 def stage_latest_firmware_binaries_on_dut(
     duthost,
+    required_firmware_metadata_for_all_transceivers,
     transceiver_firmware_info_parser,
-    required_firmware_metadata_for_all_transceivers
 ):
     logger.info("Staging latest CMIS CDB firmware binaries on DUT")
 
